@@ -68,7 +68,39 @@ instance Arbitrary a => Arbitrary (ZipList' a) where
 ziplistTrigger :: ZipList' (String, Int, Maybe Int)
 ziplistTrigger = undefined
 
+
+---- Variations on Either ----
+data Validation e a = 
+    Failure' e
+  | Success' a
+  deriving (Eq, Show)
+
+
+instance Functor (Validation e) where
+  fmap _ (Failure' e) = Failure' e
+  fmap f (Success' a) = Success' (f a)
+
+instance (Monoid e) => Applicative (Validation e) where
+  pure = Success'
+  Failure' e <*> Failure' e' = Failure' (e <> e')
+  Failure' e <*> Success' _ = Failure' e
+  Success' _ <*> Failure' e = Failure' e
+  Success' f <*> Success' a = Success' (f a)
+
+instance (Arbitrary e, Arbitrary a) => Arbitrary (Validation e a) where
+  arbitrary = do
+    e <- arbitrary
+    a <- arbitrary
+    frequency [(1, return (Failure' e)), (1, return (Success' a))]
+
+instance (Eq e, Eq a) => EqProp (Validation e a) where
+  (=-=) = eq
+
+validationTrigger :: Validation String (String, Int, Maybe Int)
+validationTrigger = undefined
+
 main :: IO ()
 main = do
   quickBatch (applicative listTrigger)
   quickBatch $ applicative ziplistTrigger 
+  quickBatch $ applicative validationTrigger
