@@ -90,6 +90,15 @@ instance Functor (Four' a) where
     fmap f (Four' x y z b) = Four' x y z (f b)
 
 
+data Possibly a = LolNope | Yeppers a deriving (Eq, Show)
+instance Functor Possibly where
+    fmap f LolNope = LolNope
+    fmap f (Yeppers a) = Yeppers (f a)
+instance Arbitrary a => Arbitrary (Possibly a) where
+    arbitrary = do
+        a <- arbitrary
+        elements [LolNope, Yeppers a]
+
 -- -- -- -- -- -- -- --
 
 
@@ -134,3 +143,8 @@ main = do
 
     quickCheck (functorIdentity :: IdTwo Four' String Float)
     quickCheck (functorCompose' :: CompTwo Four' Char Float String Int)
+
+    -- -- -- --
+
+    quickCheck (functorIdentity :: IdIdentity Possibly String)
+    quickCheck (functorCompose' :: CompIdentity Possibly String Float Int)
