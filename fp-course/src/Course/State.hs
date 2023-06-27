@@ -13,6 +13,7 @@ import Course.Functor
 import Course.Applicative
 import Course.Monad
 import qualified Data.Set as S
+import Data.Set
 
 -- $setup
 -- >>> import Test.QuickCheck.Function
@@ -38,8 +39,7 @@ exec ::
   State s a
   -> s
   -> s
-exec =
-  error "todo: Course.State#exec"
+exec st s = snd (runState st s)
 
 -- | Run the `State` seeded with `s` and retrieve the resulting value.
 --
@@ -48,8 +48,7 @@ eval ::
   State s a
   -> s
   -> a
-eval =
-  error "todo: Course.State#eval"
+eval st s = fst (runState st s)
 
 -- | A `State` where the state also distributes into the produced value.
 --
@@ -57,8 +56,7 @@ eval =
 -- (0,0)
 get ::
   State s s
-get =
-  error "todo: Course.State#get"
+get = State{runState= \s -> (s, s)}
 
 -- | A `State` where the resulting state is seeded with the given value.
 --
@@ -67,8 +65,7 @@ get =
 put ::
   s
   -> State s ()
-put =
-  error "todo: Course.State#put"
+put s = State {runState= P.const ((), s)}
 
 -- | Implement the `Functor` instance for `State s`.
 --
@@ -79,8 +76,11 @@ instance Functor (State s) where
     (a -> b)
     -> State s a
     -> State s b
-  (<$>) =
-    error "todo: Course.State#(<$>)"
+  f <$> State x = State f'
+    where
+      f' s = (f a, s')
+        where
+          (a, s') = x s
 
 -- | Implement the `Applicative` instance for `State s`.
 --
@@ -97,14 +97,17 @@ instance Applicative (State s) where
   pure ::
     a
     -> State s a
-  pure =
-    error "todo: Course.State pure#instance (State s)"
+  pure x = State {runState= \s -> (x, s)}
   (<*>) ::
     State s (a -> b)
     -> State s a
-    -> State s b 
-  (<*>) =
-    error "todo: Course.State (<*>)#instance (State s)"
+    -> State s b
+  State f <*> State x = State f'
+    where
+      f' s = (g a, s'')
+        where
+          (g, s') = f s
+          (a, s'') = x s'
 
 -- | Implement the `Bind` instance for `State s`.
 --
@@ -118,8 +121,11 @@ instance Monad (State s) where
     (a -> State s b)
     -> State s a
     -> State s b
-  (=<<) =
-    error "todo: Course.State (=<<)#instance (State s)"
+  f =<< State x = State{runState=f'}
+    where
+      f' s' = runState (f a) s''
+        where
+          (a, s'') = x s'
 
 -- | Find the first element in a `List` that satisfies a given predicate.
 -- It is possible that no element is found, hence an `Optional` result.
@@ -140,8 +146,8 @@ findM ::
   (a -> f Bool)
   -> List a
   -> f (Optional a)
-findM =
-  error "todo: Course.State#findM"
+findM _ Nil = return Empty
+findM f (x:.xs) = f x >>= (\b -> if b then return (Full x) else findM f xs)
 
 -- | Find the first element in a `List` that repeats.
 -- It is possible that no element repeats, hence an `Optional` result.
